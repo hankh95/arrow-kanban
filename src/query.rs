@@ -6,7 +6,17 @@
 //! 3. **SPARQL subset** — parse SELECT/WHERE/FILTER/ORDER BY/LIMIT
 //! 4. **Hybrid** — NL extraction + semantic ranking on remaining terms
 
+#[cfg(feature = "embeddings")]
 use crate::embeddings::{self, EmbeddedItem, EmbeddingProvider};
+#[cfg(not(feature = "embeddings"))]
+mod embedding_stubs {
+    /// Stub type when embeddings feature is disabled.
+    pub struct EmbeddedItem;
+    /// Stub trait when embeddings feature is disabled.
+    pub trait EmbeddingProvider {}
+}
+#[cfg(not(feature = "embeddings"))]
+use embedding_stubs::{EmbeddedItem, EmbeddingProvider};
 use crate::item_type::ItemType;
 use crate::schema::items_col;
 use arrow::array::{Array, BooleanArray, RecordBatch, StringArray};
@@ -661,7 +671,9 @@ pub struct RankedResult {
 pub fn hybrid_query(
     batches: &[RecordBatch],
     query_str: &str,
+    #[cfg_attr(not(feature = "embeddings"), allow(unused))]
     embeddings: Option<&[EmbeddedItem]>,
+    #[cfg_attr(not(feature = "embeddings"), allow(unused))]
     provider: Option<&dyn EmbeddingProvider>,
     top_k: usize,
 ) -> Vec<RankedResult> {
@@ -759,6 +771,7 @@ pub fn hybrid_query(
     }
 
     // Apply semantic ranking if we have remaining text and embeddings
+    #[cfg(feature = "embeddings")]
     if let (Some(text), Some(embeds), Some(prov)) = (&filters.text_query, embeddings, provider)
         && let Ok(sem_results) = embeddings::semantic_search(embeds, text, prov, candidates.len())
     {
@@ -1233,6 +1246,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "embeddings")]
     fn test_hybrid_query_with_semantic_search() {
         use crate::crud::{CreateItemInput, KanbanStore};
         use crate::embeddings::{HashEmbeddingProvider, embed_items};

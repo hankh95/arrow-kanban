@@ -35,6 +35,7 @@ pub mod item_type;
 #[cfg(feature = "client")]
 pub mod mcp_server;
 pub mod migrate;
+#[cfg(feature = "persistence")]
 pub mod persist;
 #[cfg(feature = "persistence")]
 pub mod persistence;
@@ -61,6 +62,7 @@ pub use hdd::{
 pub use id_alloc::{allocate_id, allocate_id_from_str, max_id_for_type};
 pub use item_type::ItemType;
 pub use migrate::{MigrateResult, migrate_boards};
+#[cfg(feature = "persistence")]
 pub use persistence::{
     GitBackupMetrics, HealthMetrics, PersistenceConfig, PersistenceEngine, SaveMetrics,
 };

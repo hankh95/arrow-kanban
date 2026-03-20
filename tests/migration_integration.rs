@@ -3,8 +3,8 @@
 //! These tests use synthetic directory trees that mirror the NuSy project's
 //! actual file layout and content patterns.
 
-use nusy_kanban::config::BoardConfig;
-use nusy_kanban::migrate::{
+use arrow_kanban::config::BoardConfig;
+use arrow_kanban::migrate::{
     MigrateResult, extract_relations, migrate_board, migrate_boards, parse_markdown_file,
     parse_turtle_blocks,
 };
@@ -315,7 +315,7 @@ default_board: development
     .unwrap();
 
     // --- Run full migration ---
-    let config = nusy_kanban::config::ConfigFile::from_path(&config_dir.join("config.yaml"))
+    let config = arrow_kanban::config::ConfigFile::from_path(&config_dir.join("config.yaml"))
         .expect("load config");
     let result = migrate_boards(root, &config).expect("migrate");
 
@@ -505,10 +505,10 @@ fn test_parquet_round_trip() {
 
     // Save to Parquet
     let (store, _) = result.into_stores().expect("into stores");
-    nusy_kanban::persist::save_store(dir.path(), &store).expect("save");
+    arrow_kanban::persist::save_store(dir.path(), &store).expect("save");
 
     // Load back
-    let loaded = nusy_kanban::persist::load_store(dir.path()).expect("load");
+    let loaded = arrow_kanban::persist::load_store(dir.path()).expect("load");
     assert_eq!(loaded.active_item_count(), 10);
 
     // Verify a specific item

@@ -10,9 +10,9 @@ readme = "README.md"
 keywords = ["arrow", "kanban", "project-management", "nats", "shacl"]
 categories = ["data-structures", "command-line-utilities"]
 
-[[bin]]
-name = "arrow-kanban"
-path = "src/main.rs"
+# [[bin]]
+# name = "arrow-kanban"
+# path = "src/main.rs"
 
 [dependencies]
 # Published FOSS crates (replace internal path deps)
@@ -50,8 +50,8 @@ default = ["client", "persistence"]
 client = ["dep:async-nats", "dep:tokio", "dep:serde_json"]
 persistence = ["dep:arrow-graph-git"]
 embeddings = ["dep:nusy-graph-query"]
-# pr = ["dep:nusy-graph-review"]  # Enable when published
-# ci = ["dep:nusy-conductor"]     # Enable when published
+pr = []   # Enable when nusy-graph-review is published: pr = ["dep:nusy-graph-review"]
+ci = []   # Enable when nusy-conductor is published: ci = ["dep:nusy-conductor"]
 
 [dev-dependencies]
 tempfile = "3"

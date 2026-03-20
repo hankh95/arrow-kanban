@@ -4,10 +4,10 @@
 //! EXP-3002 Phase 1.
 
 use arrow::array::{Array, BooleanArray, ListArray, StringArray, TimestampMillisecondArray};
-use nusy_kanban::crud::{CreateItemInput, KanbanStore};
-use nusy_kanban::item_type::ItemType;
-use nusy_kanban::schema::{items_col, runs_col};
-use nusy_kanban::{display, persist};
+use arrow_kanban::crud::{CreateItemInput, KanbanStore};
+use arrow_kanban::item_type::ItemType;
+use arrow_kanban::schema::{items_col, runs_col};
+use arrow_kanban::{display, persist};
 
 /// IDs returned from populated_store().
 struct TestIds {
@@ -375,7 +375,7 @@ fn test_init_creates_config_structure() {
     std::fs::create_dir_all(&config_dir).expect("create config dir");
     std::fs::write(
         config_dir.join("config.yaml"),
-        nusy_kanban::config::default_config_yaml(),
+        arrow_kanban::config::default_config_yaml(),
     )
     .expect("write config");
     std::fs::create_dir_all(config_dir.join("data")).expect("create data dir");
@@ -403,7 +403,7 @@ fn test_init_idempotent() {
     std::fs::create_dir_all(&config_dir).expect("create config dir");
     std::fs::write(
         config_dir.join("config.yaml"),
-        nusy_kanban::config::default_config_yaml(),
+        arrow_kanban::config::default_config_yaml(),
     )
     .expect("write config");
 

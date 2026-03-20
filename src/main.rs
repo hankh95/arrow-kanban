@@ -5,25 +5,25 @@
 
 use arrow::array::Array;
 use clap::{Parser, Subcommand};
-use nusy_arrow_git::commit::Commit;
-use nusy_arrow_git::save::{persist_commits, restore_commits};
-use nusy_kanban::config::ConfigFile;
-use nusy_kanban::critical_path;
-use nusy_kanban::crud::CreateItemInput;
-use nusy_kanban::display;
-use nusy_kanban::export;
-use nusy_kanban::id_alloc;
-use nusy_kanban::item_type::ItemType;
-use nusy_kanban::persist;
-use nusy_kanban::query;
-use nusy_kanban::state_machine;
+// [PERSIST] use nusy_arrow_git::commit::Commit;
+// [PERSIST] use nusy_arrow_git::save::{persist_commits, restore_commits};
+use arrow_kanban::config::ConfigFile;
+use arrow_kanban::critical_path;
+use arrow_kanban::crud::CreateItemInput;
+use arrow_kanban::display;
+use arrow_kanban::export;
+use arrow_kanban::id_alloc;
+use arrow_kanban::item_type::ItemType;
+use arrow_kanban::persist;
+use arrow_kanban::query;
+use arrow_kanban::state_machine;
 use std::path::PathBuf;
 use std::process;
 
 /// Generate a body template for a given item type using SHACL shapes.
 fn generate_template(item_type: &str, title: &str, root: &std::path::Path) -> String {
-    let loader = nusy_kanban::templates::ShapeLoader::new(root);
-    let generator = nusy_kanban::templates::TemplateGenerator::new(loader);
+    let loader = arrow_kanban::templates::ShapeLoader::new(root);
+    let generator = arrow_kanban::templates::TemplateGenerator::new(loader);
 
     if let Some(it) = ItemType::from_str_loose(item_type) {
         generator.generate(&it, title)
@@ -371,19 +371,19 @@ enum Commands {
     /// Graph-native PR workflow (mirrors gh pr)
     Pr {
         #[command(subcommand)]
-        command: nusy_kanban::pr_cli::PrCommands,
+        command: arrow_kanban::pr_cli::PrCommands,
     },
 
     /// Graph-native git operations (push/pull/clone/log/blame/rebase)
     Git {
         #[command(subcommand)]
-        command: nusy_kanban::git_cli::GitCommands,
+        command: arrow_kanban::git_cli::GitCommands,
     },
 
     /// Source code transport over NATS (git bundles)
     Source {
         #[command(subcommand)]
-        command: nusy_kanban::source_cli::SourceCommands,
+        command: arrow_kanban::source_cli::SourceCommands,
     },
 }
 
@@ -478,7 +478,7 @@ fn main() {
     #[cfg(feature = "client")]
     if let Commands::McpServer { ref nats_url } = cli.command {
         let nats = cli.server.as_deref().unwrap_or(nats_url);
-        match nusy_kanban::mcp_server::McpServer::new(nats) {
+        match arrow_kanban::mcp_server::McpServer::new(nats) {
             Ok(server) => {
                 eprintln!("nusy-kanban MCP server started (stdio transport)");
                 if let Err(e) = server.run() {
@@ -659,19 +659,19 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
             // Get current item to check board
             let item = store.get_item(&id)?;
             let current_status = item
-                .column(nusy_kanban::schema::items_col::STATUS)
+                .column(arrow_kanban::schema::items_col::STATUS)
                 .as_any()
                 .downcast_ref::<arrow::array::StringArray>()
                 .expect("status")
                 .value(0);
             let item_type_str = item
-                .column(nusy_kanban::schema::items_col::ITEM_TYPE)
+                .column(arrow_kanban::schema::items_col::ITEM_TYPE)
                 .as_any()
                 .downcast_ref::<arrow::array::StringArray>()
                 .expect("type")
                 .value(0);
             let board_name = item
-                .column(nusy_kanban::schema::items_col::BOARD)
+                .column(arrow_kanban::schema::items_col::BOARD)
                 .as_any()
                 .downcast_ref::<arrow::array::StringArray>()
                 .expect("board")
@@ -820,7 +820,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
             if let Some(ref res_filter) = resolution {
                 results.retain(|batch| {
                     let res_col = batch
-                        .column(nusy_kanban::schema::items_col::RESOLUTION)
+                        .column(arrow_kanban::schema::items_col::RESOLUTION)
                         .as_any()
                         .downcast_ref::<arrow::array::StringArray>()
                         .expect("resolution column");
@@ -832,7 +832,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
             if let Some(ref pri_filter) = priority {
                 results.retain(|batch| {
                     let pri_col = batch
-                        .column(nusy_kanban::schema::items_col::PRIORITY)
+                        .column(arrow_kanban::schema::items_col::PRIORITY)
                         .as_any()
                         .downcast_ref::<arrow::array::StringArray>()
                         .expect("priority column");
@@ -850,7 +850,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
                     cp.ready.iter().map(|s| s.as_str()).collect();
                 results.retain(|batch| {
                     let ids = batch
-                        .column(nusy_kanban::schema::items_col::ID)
+                        .column(arrow_kanban::schema::items_col::ID)
                         .as_any()
                         .downcast_ref::<arrow::array::StringArray>()
                         .expect("id");
@@ -918,7 +918,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
                         .into_iter()
                         .filter(|batch| {
                             let titles = batch
-                                .column(nusy_kanban::schema::items_col::TITLE)
+                                .column(arrow_kanban::schema::items_col::TITLE)
                                 .as_any()
                                 .downcast_ref::<arrow::array::StringArray>()
                                 .expect("title");
@@ -930,10 +930,10 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
                 } else {
                     // Semantic search with selected embedding provider
                     let provider =
-                        nusy_kanban::embeddings::resolve_provider(embedding_provider.as_deref());
-                    let embeddings = nusy_kanban::embeddings::embed_items(&all, provider.as_ref())
+                        arrow_kanban::embeddings::resolve_provider(embedding_provider.as_deref());
+                    let embeddings = arrow_kanban::embeddings::embed_items(&all, provider.as_ref())
                         .unwrap_or_default();
-                    let sem_results = nusy_kanban::embeddings::semantic_search(
+                    let sem_results = arrow_kanban::embeddings::semantic_search(
                         &embeddings,
                         search_text,
                         provider.as_ref(),
@@ -948,32 +948,32 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
                             // Find the item in batches
                             for batch in &all {
                                 let ids = batch
-                                    .column(nusy_kanban::schema::items_col::ID)
+                                    .column(arrow_kanban::schema::items_col::ID)
                                     .as_any()
                                     .downcast_ref::<arrow::array::StringArray>()
                                     .expect("id");
                                 let titles = batch
-                                    .column(nusy_kanban::schema::items_col::TITLE)
+                                    .column(arrow_kanban::schema::items_col::TITLE)
                                     .as_any()
                                     .downcast_ref::<arrow::array::StringArray>()
                                     .expect("title");
                                 let types = batch
-                                    .column(nusy_kanban::schema::items_col::ITEM_TYPE)
+                                    .column(arrow_kanban::schema::items_col::ITEM_TYPE)
                                     .as_any()
                                     .downcast_ref::<arrow::array::StringArray>()
                                     .expect("type");
                                 let statuses = batch
-                                    .column(nusy_kanban::schema::items_col::STATUS)
+                                    .column(arrow_kanban::schema::items_col::STATUS)
                                     .as_any()
                                     .downcast_ref::<arrow::array::StringArray>()
                                     .expect("status");
                                 let priorities = batch
-                                    .column(nusy_kanban::schema::items_col::PRIORITY)
+                                    .column(arrow_kanban::schema::items_col::PRIORITY)
                                     .as_any()
                                     .downcast_ref::<arrow::array::StringArray>()
                                     .expect("priority");
                                 let assignees = batch
-                                    .column(nusy_kanban::schema::items_col::ASSIGNEE)
+                                    .column(arrow_kanban::schema::items_col::ASSIGNEE)
                                     .as_any()
                                     .downcast_ref::<arrow::array::StringArray>()
                                     .expect("assignee");
@@ -1117,7 +1117,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
                     .into_iter()
                     .filter(|batch| {
                         let Some(ids) = batch
-                            .column(nusy_kanban::schema::items_col::ID)
+                            .column(arrow_kanban::schema::items_col::ID)
                             .as_any()
                             .downcast_ref::<arrow::array::StringArray>()
                         else {
@@ -1142,12 +1142,12 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
             let all = store.query_items(None, None, None, None);
             let (embeddings, provider_box): (
                 Option<Vec<_>>,
-                Option<Box<dyn nusy_kanban::embeddings::EmbeddingProvider>>,
+                Option<Box<dyn arrow_kanban::embeddings::EmbeddingProvider>>,
             );
             if !no_semantic && filters.text_query.is_some() {
-                let prov = nusy_kanban::embeddings::resolve_provider(embedding_provider.as_deref());
+                let prov = arrow_kanban::embeddings::resolve_provider(embedding_provider.as_deref());
                 let embeds =
-                    nusy_kanban::embeddings::embed_items(&all, prov.as_ref()).unwrap_or_default();
+                    arrow_kanban::embeddings::embed_items(&all, prov.as_ref()).unwrap_or_default();
                 provider_box = Some(prov);
                 embeddings = Some(embeds);
             } else {
@@ -1161,7 +1161,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
                 embeddings.as_deref(),
                 provider_box
                     .as_ref()
-                    .map(|p| p.as_ref() as &dyn nusy_kanban::embeddings::EmbeddingProvider),
+                    .map(|p| p.as_ref() as &dyn arrow_kanban::embeddings::EmbeddingProvider),
                 top,
             );
 
@@ -1184,7 +1184,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
                             .into_iter()
                             .filter(|batch| {
                                 let titles = batch
-                                    .column(nusy_kanban::schema::items_col::TITLE)
+                                    .column(arrow_kanban::schema::items_col::TITLE)
                                     .as_any()
                                     .downcast_ref::<arrow::array::StringArray>()
                                     .expect("title");
@@ -1208,25 +1208,25 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
             weeks,
         } => {
             if velocity {
-                let vel = nusy_kanban::stats::compute_velocity(store.runs_batches(), weeks);
-                print!("{}", nusy_kanban::stats::format_velocity(&vel));
+                let vel = arrow_kanban::stats::compute_velocity(store.runs_batches(), weeks);
+                print!("{}", arrow_kanban::stats::format_velocity(&vel));
             } else if burndown {
                 let since_ms = if let Some(ref date) = since {
-                    nusy_kanban::stats::parse_date_to_ms(date)
+                    arrow_kanban::stats::parse_date_to_ms(date)
                         .ok_or_else(|| format!("Invalid date: {date} (use YYYY-MM-DD)"))?
                 } else {
                     // Default: last 4 weeks
                     chrono::Utc::now().timestamp_millis() - (4 * 7 * 24 * 60 * 60 * 1000)
                 };
-                let points = nusy_kanban::stats::compute_burndown(
+                let points = arrow_kanban::stats::compute_burndown(
                     store.items_batches(),
                     store.runs_batches(),
                     since_ms,
                 );
-                print!("{}", nusy_kanban::stats::format_burndown(&points));
+                print!("{}", arrow_kanban::stats::format_burndown(&points));
             } else if by_agent {
-                let stats = nusy_kanban::stats::compute_agent_stats(store.runs_batches());
-                print!("{}", nusy_kanban::stats::format_agent_stats(&stats));
+                let stats = arrow_kanban::stats::compute_agent_stats(store.runs_batches());
+                print!("{}", arrow_kanban::stats::format_agent_stats(&stats));
             } else {
                 // Default: existing status/type summary
                 let board_config = config.board(&board)?;
@@ -1242,7 +1242,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
             by_assignee,
         } => {
             let since_ms = if let Some(ref date) = since {
-                nusy_kanban::stats::parse_date_to_ms(date)
+                arrow_kanban::stats::parse_date_to_ms(date)
                     .ok_or_else(|| format!("Invalid date: {date} (use YYYY-MM-DD)"))?
             } else if month {
                 chrono::Utc::now().timestamp_millis() - (30 * 24 * 60 * 60 * 1000)
@@ -1254,13 +1254,13 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
             };
 
             if week || month || since.is_some() || by_assignee.is_some() {
-                let entries = nusy_kanban::stats::filter_history(
+                let entries = arrow_kanban::stats::filter_history(
                     store.items_batches(),
                     store.runs_batches(),
                     since_ms,
                     by_assignee.as_deref(),
                 );
-                print!("{}", nusy_kanban::stats::format_history_entries(&entries));
+                print!("{}", arrow_kanban::stats::format_history_entries(&entries));
             } else {
                 // Original behavior: show all done items
                 let default_board = config.default_board()?;
@@ -1290,7 +1290,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
                     sorted.sort_by(|a, b| {
                         let get_priority = |batch: &arrow::array::RecordBatch| -> i32 {
                             let prios = batch
-                                .column(nusy_kanban::schema::items_col::PRIORITY)
+                                .column(arrow_kanban::schema::items_col::PRIORITY)
                                 .as_any()
                                 .downcast_ref::<arrow::array::StringArray>()
                                 .expect("priority");
@@ -1383,7 +1383,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
 
                 for batch in &blocked {
                     if let Some(ids) = batch
-                        .column(nusy_kanban::schema::items_col::ID)
+                        .column(arrow_kanban::schema::items_col::ID)
                         .as_any()
                         .downcast_ref::<arrow::array::StringArray>()
                     {
@@ -1413,7 +1413,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
             all,
             status,
         } => {
-            use nusy_kanban::validate;
+            use arrow_kanban::validate;
 
             if let Some(item_id) = id {
                 // Single-item validation
@@ -1480,7 +1480,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
                     // Compute burndown for the last 8 weeks
                     let since_ms =
                         chrono::Utc::now().timestamp_millis() - (8 * 7 * 24 * 60 * 60 * 1000i64);
-                    let burndown = nusy_kanban::stats::compute_burndown(
+                    let burndown = arrow_kanban::stats::compute_burndown(
                         store.items_batches(),
                         store.runs_batches(),
                         since_ms,
@@ -1494,7 +1494,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
                 }
                 "research-index" => {
                     let rel_store = persist::load_relations(&root)?;
-                    let chains = nusy_kanban::build_registry(&store, &rel_store);
+                    let chains = arrow_kanban::build_registry(&store, &rel_store);
                     export::export_research_index_html(&chains)
                 }
                 _ => {
@@ -1516,7 +1516,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
         }
 
         Commands::Migrate { dry_run } => {
-            let result = nusy_kanban::migrate::migrate_boards(&root, &config)?;
+            let result = arrow_kanban::migrate::migrate_boards(&root, &config)?;
             println!("{}", result.summary());
 
             if dry_run {
@@ -1538,12 +1538,12 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
 
             match hdd_cmd {
                 HddCommands::Paper { title, tags } => {
-                    let result = nusy_kanban::create_paper(&mut store, &title, parse_tags(tags))?;
+                    let result = arrow_kanban::create_paper(&mut store, &title, parse_tags(tags))?;
                     persist::save_store(&root, &store)?;
                     println!("Created {}: {}", result.id, title);
                 }
                 HddCommands::Hypothesis { title, paper, tags } => {
-                    let result = nusy_kanban::create_hypothesis(
+                    let result = arrow_kanban::create_hypothesis(
                         &mut store,
                         &mut rel_store,
                         &title,
@@ -1562,7 +1562,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
                     hypothesis,
                     tags,
                 } => {
-                    let result = nusy_kanban::create_experiment(
+                    let result = arrow_kanban::create_experiment(
                         &mut store,
                         &mut rel_store,
                         &title,
@@ -1581,7 +1581,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
                     experiment,
                     tags,
                 } => {
-                    let result = nusy_kanban::create_measure(
+                    let result = arrow_kanban::create_measure(
                         &mut store,
                         &mut rel_store,
                         &title,
@@ -1593,18 +1593,18 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
                     println!("Created {}: {}", result.id, title);
                 }
                 HddCommands::Idea { title, tags } => {
-                    let result = nusy_kanban::create_idea(&mut store, &title, parse_tags(tags))?;
+                    let result = arrow_kanban::create_idea(&mut store, &title, parse_tags(tags))?;
                     persist::save_store(&root, &store)?;
                     println!("Created {}: {}", result.id, title);
                 }
                 HddCommands::Literature { title, tags } => {
                     let result =
-                        nusy_kanban::create_literature(&mut store, &title, parse_tags(tags))?;
+                        arrow_kanban::create_literature(&mut store, &title, parse_tags(tags))?;
                     persist::save_store(&root, &store)?;
                     println!("Created {}: {}", result.id, title);
                 }
                 HddCommands::Validate => {
-                    let errors = nusy_kanban::validate_hdd(&store, &rel_store);
+                    let errors = arrow_kanban::validate_hdd(&store, &rel_store);
                     if errors.is_empty() {
                         println!("HDD validation passed — no issues found.");
                     } else {
@@ -1615,7 +1615,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
                     }
                 }
                 HddCommands::Registry => {
-                    let chains = nusy_kanban::build_registry(&store, &rel_store);
+                    let chains = arrow_kanban::build_registry(&store, &rel_store);
                     if chains.is_empty() {
                         println!("No papers found.");
                     } else {
@@ -1645,7 +1645,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
                 HddCommands::Status { experiment_id } => {
                     let run_store = persist::load_experiment_runs(&root);
                     let runs = run_store.list_runs(&experiment_id);
-                    print!("{}", nusy_kanban::experiment_runs::format_runs(&runs));
+                    print!("{}", arrow_kanban::experiment_runs::format_runs(&runs));
                 }
                 HddCommands::Complete {
                     experiment_id,
@@ -1679,13 +1679,13 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
                 // Return the first item (already sorted by query)
                 let item = &results[0];
                 let id = item
-                    .column(nusy_kanban::schema::items_col::ID)
+                    .column(arrow_kanban::schema::items_col::ID)
                     .as_any()
                     .downcast_ref::<arrow::array::StringArray>()
                     .expect("id")
                     .value(0);
                 let title = item
-                    .column(nusy_kanban::schema::items_col::TITLE)
+                    .column(arrow_kanban::schema::items_col::TITLE)
                     .as_any()
                     .downcast_ref::<arrow::array::StringArray>()
                     .expect("title")
@@ -1707,8 +1707,8 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
         }
 
         Commands::Templates { item_type } => {
-            let loader = nusy_kanban::templates::ShapeLoader::new(&root);
-            let generator = nusy_kanban::templates::TemplateGenerator::new(loader);
+            let loader = arrow_kanban::templates::ShapeLoader::new(&root);
+            let generator = arrow_kanban::templates::TemplateGenerator::new(loader);
 
             if let Some(type_str) = item_type {
                 if let Some(it) = ItemType::from_str_loose(&type_str) {
@@ -1721,24 +1721,24 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
                 let summaries = generator.list_all();
                 print!(
                     "{}",
-                    nusy_kanban::templates::format_type_listing(&summaries)
+                    arrow_kanban::templates::format_type_listing(&summaries)
                 );
             }
         }
 
         Commands::McpServer { nats_url } => {
-            let server = nusy_kanban::mcp_server::McpServer::new(&nats_url)?;
+            let server = arrow_kanban::mcp_server::McpServer::new(&nats_url)?;
             eprintln!("nusy-kanban MCP server started (stdio transport)");
             server.run()?;
         }
 
         Commands::Pr { command: pr_cmd } => {
-            let mut proposals = nusy_graph_review::ProposalStore::new();
-            let mut comments = nusy_graph_review::CommentStore::new();
-            let mut ci_results = nusy_graph_review::CiResultStore::new();
+// [PR]             let mut proposals = nusy_graph_review::ProposalStore::new();
+// [PR]             let mut comments = nusy_graph_review::CommentStore::new();
+// [PR]             let mut ci_results = nusy_graph_review::CiResultStore::new();
             // TODO: Load proposals from persistence when available
             let agent = detect_agent_name();
-            nusy_kanban::pr_cli::run_pr_command(
+            arrow_kanban::pr_cli::run_pr_command(
                 &pr_cmd,
                 &mut proposals,
                 &mut comments,
@@ -1748,7 +1748,7 @@ fn run(root: PathBuf, command: Commands) -> Result<(), Box<dyn std::error::Error
         }
 
         Commands::Git { command: git_cmd } => {
-            use nusy_kanban::git_cli::GitCommands;
+            use arrow_kanban::git_cli::GitCommands;
             match git_cmd {
                 GitCommands::Log { limit, store: _ } => {
                     println!("nk git log: local mode not yet implemented — use --server");
@@ -1800,7 +1800,7 @@ fn run_init(root: &std::path::Path, theme: &str) -> Result<(), Box<dyn std::erro
     std::fs::create_dir_all(&config_dir)?;
     std::fs::write(
         config_dir.join("config.yaml"),
-        nusy_kanban::config::default_config_yaml(),
+        arrow_kanban::config::default_config_yaml(),
     )?;
     std::fs::create_dir_all(config_dir.join("data"))?;
 
@@ -1812,8 +1812,8 @@ fn run_init(root: &std::path::Path, theme: &str) -> Result<(), Box<dyn std::erro
     }
 
     // Generate theme-specific template files
-    let loader = nusy_kanban::templates::ShapeLoader::new(root);
-    let generator = nusy_kanban::templates::TemplateGenerator::new(loader);
+    let loader = arrow_kanban::templates::ShapeLoader::new(root);
+    let generator = arrow_kanban::templates::TemplateGenerator::new(loader);
     let templates_dir = config_dir.join("templates");
     std::fs::create_dir_all(&templates_dir)?;
 
@@ -1936,11 +1936,11 @@ fn install_claude_skills(root: &std::path::Path) -> Result<(), Box<dyn std::erro
 /// Run a command in client mode via NATS request-reply.
 #[cfg(feature = "client")]
 fn run_client(server_url: &str, command: &Commands) -> Result<(), Box<dyn std::error::Error>> {
-    let client = nusy_kanban::client::NatsClient::connect(server_url)?;
+    let client = arrow_kanban::client::NatsClient::connect(server_url)?;
 
     // Special-case: pr recheck runs CI locally then stores results on server
     if let Commands::Pr {
-        command: nusy_kanban::pr_cli::PrCommands::Recheck { id },
+        command: arrow_kanban::pr_cli::PrCommands::Recheck { id },
     } = command
     {
         return run_recheck_client(&client, id);
@@ -1963,7 +1963,7 @@ fn run_client(server_url: &str, command: &Commands) -> Result<(), Box<dyn std::e
 /// 3. Stores the results on the server via `pr.ci_store`
 #[cfg(feature = "client")]
 fn run_recheck_client(
-    client: &nusy_kanban::client::NatsClient,
+    client: &arrow_kanban::client::NatsClient,
     proposal_id: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Verify proposal exists
@@ -1972,10 +1972,10 @@ fn run_recheck_client(
     let repo_root = get_repo_root()?;
     println!("Running CI checks for {proposal_id}...\n");
 
-    let suite = nusy_conductor::ci_runner::run_ci_checks(&repo_root);
+// [CI]     let suite = nusy_conductor::ci_runner::run_ci_checks(&repo_root);
 
     // Extract counts from suite
-    // #[cfg(feature = "ci")] use nusy_conductor::ci_runner::CheckType;
+// [CI]     // #[cfg(feature = "ci")] use nusy_conductor::ci_runner::CheckType;
     let mut test_passed = 0u32;
     let mut test_failed = 0u32;
     let mut clippy_warnings = 0u32;
@@ -2380,7 +2380,7 @@ fn command_to_nats(command: &Commands) -> (String, serde_json::Value) {
             serde_json::json!({ "id": id, "text": text }),
         ),
         Commands::Pr { command: pr_cmd } => {
-            use nusy_kanban::pr_cli::PrCommands;
+            use arrow_kanban::pr_cli::PrCommands;
             let agent = detect_agent_name();
             match pr_cmd {
                 PrCommands::Create { title, base, body } => (
@@ -2464,7 +2464,7 @@ fn command_to_nats(command: &Commands) -> (String, serde_json::Value) {
             }
         }
         Commands::Git { command: git_cmd } => {
-            use nusy_kanban::git_cli::GitCommands;
+            use arrow_kanban::git_cli::GitCommands;
             let agent = detect_agent_name();
             match git_cmd {
                 GitCommands::Push { store } => (
@@ -2505,16 +2505,16 @@ fn command_to_nats(command: &Commands) -> (String, serde_json::Value) {
             }
         }
         Commands::Source { command: src_cmd } => {
-            use nusy_kanban::source_cli::SourceCommands;
+            use arrow_kanban::source_cli::SourceCommands;
             let agent = detect_agent_name();
             match src_cmd {
                 SourceCommands::Push { branch, base } => {
                     let branch_name = branch.clone().unwrap_or_else(|| {
-                        nusy_kanban::source_cli::current_branch()
+                        arrow_kanban::source_cli::current_branch()
                             .unwrap_or_else(|_| "HEAD".to_string())
                     });
                     // Create bundle locally, then send to server
-                    match nusy_kanban::source_cli::create_bundle(&branch_name, base) {
+                    match arrow_kanban::source_cli::create_bundle(&branch_name, base) {
                         Ok(data) => {
                             let encoded = base64_encode(&data);
                             (
@@ -2550,14 +2550,14 @@ fn command_to_nats(command: &Commands) -> (String, serde_json::Value) {
     }
 }
 
-/// Base64 encode — delegates to shared `nusy_kanban::base64`.
+/// Base64 encode — delegates to shared `arrow_kanban::base64`.
 fn base64_encode(data: &[u8]) -> String {
-    nusy_kanban::base64::encode(data)
+    arrow_kanban::base64::encode(data)
 }
 
-/// Base64 decode — delegates to shared `nusy_kanban::base64`.
+/// Base64 decode — delegates to shared `arrow_kanban::base64`.
 fn base64_decode(input: &str) -> Vec<u8> {
-    nusy_kanban::base64::decode(input)
+    arrow_kanban::base64::decode(input)
 }
 
 /// Print a NATS response in user-friendly format.
@@ -2711,7 +2711,7 @@ fn print_client_response(command: &str, response: &serde_json::Value) {
                     .and_then(|v| v.as_str())
                     .unwrap_or("main");
                 let data = base64_decode(bundle_b64);
-                match nusy_kanban::source_cli::apply_bundle(&data, branch) {
+                match arrow_kanban::source_cli::apply_bundle(&data, branch) {
                     Ok(msg) => println!("{msg}"),
                     Err(e) => eprintln!("Error applying bundle: {e}"),
                 }
@@ -2850,9 +2850,9 @@ fn get_current_git_branch() -> String {
 /// Uses graph-query BFS for transitive dependency traversal with cycle detection.
 /// An item is "blocked" if it has a depends_on chain where at least one
 /// dependency is not in a terminal state.
-fn find_blocked_items(store: &nusy_kanban::crud::KanbanStore) -> Vec<arrow::array::RecordBatch> {
+fn find_blocked_items(store: &arrow_kanban::crud::KanbanStore) -> Vec<arrow::array::RecordBatch> {
     use arrow::array::{Array as _, StringArray};
-    use nusy_kanban::schema::items_col;
+    use arrow_kanban::schema::items_col;
 
     // Build a set of done/terminal item IDs
     let mut done_ids = std::collections::HashSet::new();
@@ -2920,9 +2920,9 @@ fn find_blocked_items(store: &nusy_kanban::crud::KanbanStore) -> Vec<arrow::arra
 }
 
 /// Format all relationships for an item (depends_on, related, RelationsStore).
-fn format_item_relations(id: &str, store: &nusy_kanban::crud::KanbanStore) -> String {
+fn format_item_relations(id: &str, store: &arrow_kanban::crud::KanbanStore) -> String {
     use arrow::array::{Array as _, ListArray, StringArray};
-    use nusy_kanban::schema::items_col;
+    use arrow_kanban::schema::items_col;
 
     let mut lines = Vec::new();
     lines.push(String::new());
@@ -2997,7 +2997,7 @@ fn format_item_relations(id: &str, store: &nusy_kanban::crud::KanbanStore) -> St
 fn build_dependency_adjacency(
     all_items: &[arrow::array::RecordBatch],
 ) -> std::collections::HashMap<String, Vec<String>> {
-    use nusy_kanban::schema::items_col;
+    use arrow_kanban::schema::items_col;
 
     let mut adj = std::collections::HashMap::new();
     for batch in all_items {
@@ -3016,10 +3016,10 @@ fn build_dependency_adjacency(
 
 /// Build a map of item ID → status for chain display.
 fn build_status_map(
-    store: &nusy_kanban::crud::KanbanStore,
+    store: &arrow_kanban::crud::KanbanStore,
 ) -> std::collections::HashMap<String, String> {
     use arrow::array::StringArray;
-    use nusy_kanban::schema::items_col;
+    use arrow_kanban::schema::items_col;
 
     let mut map = std::collections::HashMap::new();
     for batch in store.items_batches() {

@@ -7,8 +7,11 @@ use crate::comments::CommentsStore;
 use crate::crud::KanbanStore;
 use crate::relations::RelationsStore;
 use arrow::array::{RecordBatch, new_null_array};
+#[cfg(feature = "persistence")]
 use arrow_graph_git::save::{restore_named_batches, save_named_batches};
-use nusy_graph_review::{CiResultStore, CommentStore, ProposalStore};
+// PR review store — requires unpublished nusy-graph-review crate
+// #[cfg(feature = "pr")]
+// use nusy_graph_review::{CiResultStore, CommentStore, ProposalStore};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -233,6 +236,7 @@ pub fn load_all(root: &Path) -> Result<(KanbanStore, RelationsStore)> {
     Ok((store, relations))
 }
 
+/* PR persistence — requires nusy-graph-review (not yet published)
 /// Save proposals, comments, and CI results to Parquet files in the data directory.
 pub fn save_proposals(
     root: &Path,
@@ -285,6 +289,7 @@ pub fn load_proposals(root: &Path) -> Result<(ProposalStore, CommentStore, CiRes
 
     Ok((proposals, comments, ci_results))
 }
+*/
 
 #[cfg(test)]
 mod tests {
