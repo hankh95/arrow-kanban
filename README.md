@@ -131,6 +131,23 @@ nk pr merge PROP-2001 --delete-branch
 
 **Rules:** Author cannot self-approve. Unresolved comments block approval.
 
+## Training Queue
+
+Coordinate GPU training runs across a fleet of machines:
+
+```bash
+nk training queue EXPR-3275 --being santiago-bahai --corpus bahai --machine DGX
+nk training list
+nk training list --status queued
+nk training claim --machine DGX
+nk training complete TRAIN-001 --results research/shared/eval-data/expr3275/
+nk training fail TRAIN-001 --error "OOM at epoch 3"
+```
+
+**Lifecycle:** `queued → running → complete | failed`. Jobs are worker-filtered —
+`claim` only returns jobs targeted at the requesting machine. Backed by
+[noesis-ship](https://crates.io/crates/noesis-ship)'s generic `JobQueue<T>`.
+
 ## NATS Server Mode
 
 For multi-agent teams, run the companion
