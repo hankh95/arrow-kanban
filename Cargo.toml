@@ -1,0 +1,57 @@
+[package]
+name = "arrow-kanban"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Arrow-native kanban with SHACL shapes, graph-native PRs, dual boards, and NATS multi-agent collaboration"
+repository = "https://github.com/hankh95/arrow-kanban"
+documentation = "https://docs.rs/arrow-kanban"
+readme = "README.md"
+keywords = ["arrow", "kanban", "project-management", "nats", "shacl"]
+categories = ["data-structures", "command-line-utilities"]
+
+[[bin]]
+name = "arrow-kanban"
+path = "src/main.rs"
+
+[dependencies]
+# Published FOSS crates (replace internal path deps)
+# nusy-arrow-git functions used: save_named_batches, restore_named_batches, persist_commits, restore_commits
+arrow-graph-git = { version = "0.1", optional = true }
+nusy-graph-query = { git = "https://github.com/hankh95/nusy-graph-query", features = ["ollama", "subprocess"], optional = true }
+
+# Arrow ecosystem
+arrow = { version = "55", features = ["prettyprint"] }
+parquet = { version = "55", features = ["arrow"] }
+
+# Core deps
+uuid = { version = "1", features = ["v4"] }
+chrono = "0.4"
+thiserror = "2"
+clap = { version = "4", features = ["derive"] }
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+sha2 = "0.10"
+
+# NATS client (optional — for remote server mode)
+async-nats = { version = "0.38", optional = true }
+tokio = { version = "1", features = ["full"], optional = true }
+serde_json = { version = "1", optional = true }
+
+# PR workflow (optional — graph-native code review)
+# nusy-graph-review = { version = "0.1", optional = true }  # Not yet published
+
+# CI runner (optional)
+# nusy-conductor = { version = "0.1", optional = true }  # Not yet published
+
+[features]
+default = ["client", "persistence"]
+client = ["dep:async-nats", "dep:tokio", "dep:serde_json"]
+persistence = ["dep:arrow-graph-git"]
+embeddings = ["dep:nusy-graph-query"]
+# pr = ["dep:nusy-graph-review"]  # Enable when published
+# ci = ["dep:nusy-conductor"]     # Enable when published
+
+[dev-dependencies]
+tempfile = "3"
