@@ -18,7 +18,7 @@ categories = ["data-structures", "command-line-utilities"]
 # Published FOSS crates (replace internal path deps)
 # nusy-arrow-git functions used: save_named_batches, restore_named_batches, persist_commits, restore_commits
 arrow-graph-git = { version = "0.1", optional = true }
-nusy-graph-query = { git = "https://github.com/hankh95/nusy-graph-query", features = ["ollama", "subprocess"], optional = true }
+# nusy-graph-query = { version = "0.1", features = ["ollama", "subprocess"], optional = true }  # Not yet published
 
 # Arrow ecosystem
 arrow = { version = "55", features = ["prettyprint"] }
@@ -49,7 +49,7 @@ serde_json = { version = "1", optional = true }
 default = ["client", "persistence"]
 client = ["dep:async-nats", "dep:tokio", "dep:serde_json"]
 persistence = ["dep:arrow-graph-git"]
-embeddings = ["dep:nusy-graph-query"]
+embeddings = []  # Enable when nusy-graph-query is published: embeddings = ["dep:nusy-graph-query"]
 pr = []   # Enable when nusy-graph-review is published: pr = ["dep:nusy-graph-review"]
 ci = []   # Enable when nusy-conductor is published: ci = ["dep:nusy-conductor"]
 
