@@ -10,9 +10,7 @@ readme = "README.md"
 keywords = ["arrow", "kanban", "project-management", "nats", "shacl"]
 categories = ["data-structures", "command-line-utilities"]
 
-# [[bin]]
-# name = "arrow-kanban"
-# path = "src/main.rs"
+autobins = false
 
 [dependencies]
 # Published FOSS crates (replace internal path deps)
